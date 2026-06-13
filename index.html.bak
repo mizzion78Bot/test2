@@ -92,7 +92,7 @@
 
   let score = 0;
   let shotsLeft = 5;
-  let activeCat = null;
+  let activeBird = null;
   let dragging = false;
   let launched = false;
   let win = false;
@@ -169,14 +169,14 @@
 
     const bird = makeCat(sling.x, sling.y);
     state.birds.push(bird);
-    activeCat = bird;
+    activeBird = bird;
 
     if (level === 1) {
       shotsLeft = 5;
       const pigBaseX = 820;
       const pigBaseY = groundY - 34;
       for (let i = 0; i < 4; i++) {
-        state.mice.push(makeMouse(pigBaseX + (i % 2) * 54, pigBaseY - Math.floor(i / 2) * 54));
+        state.mice.push(makePig(pigBaseX + (i % 2) * 54, pigBaseY - Math.floor(i / 2) * 54));
       }
       const towerX = 760;
       const towerY = groundY - 26;
@@ -191,7 +191,7 @@
       const pigBaseX = 800;
       const pigBaseY = groundY - 34;
       for (let i = 0; i < 6; i++) {
-        state.mice.push(makeMouse(pigBaseX + (i % 3) * 54, pigBaseY - Math.floor(i / 3) * 54));
+        state.mice.push(makePig(pigBaseX + (i % 3) * 54, pigBaseY - Math.floor(i / 3) * 54));
       }
       const towerX = 760;
       const towerY = groundY - 26;
@@ -210,7 +210,7 @@
         [840, 420], [900, 420], [960, 420],
         [880, 370], [940, 370],
       ];
-      positions.forEach(([x, y]) => state.mice.push(makeMouse(x, y)));
+      positions.forEach(([x, y]) => state.mice.push(makePig(x, y)));
 
       const towerX = 760;
       const towerY = groundY - 26;
@@ -236,7 +236,7 @@
     return { type: 'bird', x, y, r: 18, vx: 0, vy: 0, color: '#ef4444', dead: false, launchedAt: 0 };
   }
 
-  function makeMouse(x, y) {
+  function makePig(x, y) {
     return { type: 'pig', x, y, r: 16, vx: 0, vy: 0, dead: false, color: '#22c55e' };
   }
 
@@ -253,7 +253,7 @@
     }
   }
 
-  function shootCat() {
+  function shootBird() {
     if (!activeBird || launched || shotsLeft <= 0) return;
     // The further back the bird is pulled, the faster it launches
     // Pulling left/back -> negative delta -> flies right/up
@@ -266,13 +266,13 @@
     updateHud();
   }
 
-  function nextCat() {
+  function nextBird() {
     if (win) return;
     if (!launched) return;
     if (shotsLeft < 0) shotsLeft = 0;
     const bird = makeCat(sling.x, sling.y);
     state.birds.push(bird);
-    activeCat = bird;
+    activeBird = bird;
     launched = false;
     dragging = false;
     setMessage(shotsLeft > 0 ? 'New cat loaded.' : 'No shots left. Reset to try again.');
@@ -548,7 +548,7 @@
     ctx.restore();
   }
 
-  function drawMouse(p) {
+  function drawPig(p) {
     if (p.dead) return;
     ctx.save();
     ctx.translate(p.x, p.y);
@@ -593,7 +593,7 @@
     drawBackground();
     drawSling();
     for (const block of state.blocks) drawBlock(block);
-    for (const pig of state.mice) drawMouse(pig);
+    for (const pig of state.mice) drawPig(pig);
     for (const bird of state.birds) drawCat(bird);
     drawParticles();
     requestAnimationFrame(draw);
@@ -638,7 +638,7 @@
   function endDrag() {
     if (!dragging) return;
     dragging = false;
-    shootCat();
+    shootBird();
   }
 
   window.addEventListener('pointerup', endDrag);
@@ -648,7 +648,7 @@
   newBirdBtn.addEventListener('click', nextBird);
   window.addEventListener('keydown', (ev) => {
     if (ev.key === 'r' || ev.key === 'R') resetGame();
-    if (ev.key === 'n' || ev.key === 'N') nextCat();
+    if (ev.key === 'n' || ev.key === 'N') nextBird();
   });
 
   updateHud();
