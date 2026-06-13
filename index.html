@@ -180,8 +180,8 @@
 
   function shootBird() {
     if (!activeBird || launched || shotsLeft <= 0) return;
-    const dx = sling.x - activeBird.x;
-    const dy = sling.y - activeBird.y;
+    const dx = activeBird.x - sling.x;
+    const dy = activeBird.y - sling.y;
     activeBird.vx = dx * 0.18;
     activeBird.vy = dy * 0.18;
     activeBird.launchedAt = performance.now();
