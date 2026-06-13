@@ -197,7 +197,7 @@
   }
 
   function advanceLevel() {
-    if (win) return;
+    if (win && currentLevel >= maxLevel) return;
     if (currentLevel >= maxLevel) {
       setMessage('All levels cleared! Great job!', true);
       win = true;
