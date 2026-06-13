@@ -132,8 +132,11 @@
       return;
     }
     currentLevel += 1;
-    setMessage(`Level ${currentLevel} starting...`, true);
-    nextLevelTimer = setTimeout(() => loadLevel(currentLevel), 1200);
+    win = false;
+    launched = false;
+    dragging = false;
+    loadLevel(currentLevel);
+    setMessage(`Level ${currentLevel} started.`, true);
   }
 
   function loadLevel(level) {
