@@ -96,6 +96,9 @@
   let dragging = false;
   let launched = false;
   let win = false;
+  let currentLevel = 1;
+  const maxLevel = 3;
+  let nextLevelTimer = null;
 
   const state = {
     birds: [],
@@ -109,16 +112,23 @@
     ]
   };
 
+  function cancelNextLevel() {
+    if (nextLevelTimer) {
+      clearTimeout(nextLevelTimer);
+      nextLevelTimer = null;
+    }
+  }
+
   function setMessage(text, good = false) {
     msgEl.textContent = text;
     msgEl.className = good ? 'status good' : 'status';
   }
 
-  function resetGame() {
-    score = 0;
-    shotsLeft = 5;
-    launched = false;
+  function loadLevel(level) {
+    cancelNextLevel();
     win = false;
+    launched = false;
+    dragging = false;
     state.birds = [];
     state.pigs = [];
     state.blocks = [];
@@ -128,26 +138,74 @@
     state.birds.push(bird);
     activeBird = bird;
 
-    const pigBaseX = 820;
-    const pigBaseY = groundY - 34;
-    for (let i = 0; i < 4; i++) {
-      state.pigs.push(makePig(pigBaseX + (i % 2) * 54, pigBaseY - Math.floor(i / 2) * 54));
-    }
-
-    // Tower blocks
-    const towerX = 760;
-    const towerY = groundY - 26;
-    for (let row = 0; row < 4; row++) {
-      for (let col = 0; col < 3; col++) {
-        state.blocks.push(makeBlock(towerX + col * 46, towerY - row * 36, row % 2 === 0 ? 46 : 88, 26));
+    if (level === 1) {
+      shotsLeft = 5;
+      // Standard compact tower
+      const pigBaseX = 820;
+      const pigBaseY = groundY - 34;
+      for (let i = 0; i < 4; i++) {
+        state.pigs.push(makePig(pigBaseX + (i % 2) * 54, pigBaseY - Math.floor(i / 2) * 54));
       }
-    }
+      const towerX = 760;
+      const towerY = groundY - 26;
+      for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 3; col++) {
+          state.blocks.push(makeBlock(towerX + col * 46, towerY - row * 36, row % 2 === 0 ? 46 : 88, 26));
+        }
+      }
+      for (let i = 0; i < 3; i++) state.blocks.push(makeBlock(620, groundY - 26 - i * 34, 64, 22));
+    } else if (level === 2) {
+      shotsLeft = 6;
+      // Wider stack + more pigs
+      const pigBaseX = 800;
+      const pigBaseY = groundY - 34;
+      for (let i = 0; i < 6; i++) {
+        state.pigs.push(makePig(pigBaseX + (i % 3) * 54, pigBaseY - Math.floor(i / 3) * 54));
+      }
+      const towerX = 760;
+      const towerY = groundY - 26;
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 4; col++) {
+          state.blocks.push(makeBlock(towerX + col * 46, towerY - row * 36, row % 2 === 0 ? 46 : 88, 26));
+        }
+      }
+      for (let i = 0; i < 3; i++) state.blocks.push(makeBlock(640, groundY - 26 - i * 34, 80, 24));
+      for (let i = 0; i < 3; i++) state.blocks.push(makeBlock(620, groundY - 26 - i * 28, 18, 28));
+    } else if (level === 3) {
+      shotsLeft = 7;
+      // Taller tower + spread pigs
+      const positions = [
+        [880, 520], [940, 520],
+        [860, 470], [920, 470], [980, 470],
+        [840, 420], [900, 420], [960, 420],
+        [880, 370], [940, 370],
+      ];
+      positions.forEach(([x, y]) => state.pigs.push(makePig(x, y)));
 
-    // Left small stack
-    for (let i = 0; i < 3; i++) state.blocks.push(makeBlock(620, groundY - 26 - i * 34, 64, 22));
+      const towerX = 760;
+      const towerY = groundY - 26;
+      for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 5; col++) {
+          state.blocks.push(makeBlock(towerX + col * 46, towerY - row * 36, 46, 26));
+        }
+      }
+      for (let i = 0; i < 4; i++) state.blocks.push(makeBlock(640, groundY - 26 - i * 30, 90, 24));
+    }
 
     updateHud();
-    setMessage('Ready to launch.');
+    setMessage(`Level ${level} started.`);
+  }
+
+  function advanceLevel() {
+    if (win) return;
+    if (currentLevel >= maxLevel) {
+      setMessage('All levels cleared! Great job!', true);
+      win = true;
+      return;
+    }
+    currentLevel += 1;
+    setMessage(`Level ${currentLevel} starting...`, true);
+    nextLevelTimer = setTimeout(() => loadLevel(currentLevel), 1200);
   }
 
   function updateHud() {
