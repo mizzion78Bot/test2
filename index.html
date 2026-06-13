@@ -124,7 +124,21 @@
     msgEl.className = good ? 'status good' : 'status';
   }
 
+  function advanceLevel() {
+    if (win && currentLevel >= maxLevel) return;
+    if (currentLevel >= maxLevel) {
+      setMessage('All levels cleared! Great job!', true);
+      win = true;
+      return;
+    }
+    currentLevel += 1;
+    setMessage(`Level ${currentLevel} starting...`, true);
+    nextLevelTimer = setTimeout(() => loadLevel(currentLevel), 1200);
+  }
+
   function loadLevel(level) {
+    if (!Number.isFinite(level) || level < 1) level = 1;
+    if (level > maxLevel) level = maxLevel;
     cancelNextLevel();
     win = false;
     launched = false;
@@ -140,7 +154,6 @@
 
     if (level === 1) {
       shotsLeft = 5;
-      // Standard compact tower
       const pigBaseX = 820;
       const pigBaseY = groundY - 34;
       for (let i = 0; i < 4; i++) {
@@ -156,7 +169,6 @@
       for (let i = 0; i < 3; i++) state.blocks.push(makeBlock(620, groundY - 26 - i * 34, 64, 22));
     } else if (level === 2) {
       shotsLeft = 6;
-      // Wider stack + more pigs
       const pigBaseX = 800;
       const pigBaseY = groundY - 34;
       for (let i = 0; i < 6; i++) {
@@ -171,9 +183,8 @@
       }
       for (let i = 0; i < 3; i++) state.blocks.push(makeBlock(640, groundY - 26 - i * 34, 80, 24));
       for (let i = 0; i < 3; i++) state.blocks.push(makeBlock(620, groundY - 26 - i * 28, 18, 28));
-    } else if (level === 3) {
+    } else {
       shotsLeft = 7;
-      // Taller tower + spread pigs
       const positions = [
         [880, 520], [940, 520],
         [860, 470], [920, 470], [980, 470],
@@ -194,18 +205,6 @@
 
     updateHud();
     setMessage(`Level ${level} started.`);
-  }
-
-  function advanceLevel() {
-    if (win && currentLevel >= maxLevel) return;
-    if (currentLevel >= maxLevel) {
-      setMessage('All levels cleared! Great job!', true);
-      win = true;
-      return;
-    }
-    currentLevel += 1;
-    setMessage(`Level ${currentLevel} starting...`, true);
-    nextLevelTimer = setTimeout(() => loadLevel(currentLevel), 1200);
   }
 
   function updateHud() {
