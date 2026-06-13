@@ -88,7 +88,7 @@
   const groundY = 620;
   const sling = { x: 150, y: 540 };
   const maxStretch = 120;
-  const dragBonus = 26;
+  const launchMultiplier = 0.18;
 
   let score = 0;
   let shotsLeft = 5;
@@ -98,7 +98,10 @@
   let win = false;
 
   const state = {
-    birds: [], pigs: [], blocks: [], particles: [],
+    birds: [],
+    pigs: [],
+    blocks: [],
+    particles: [],
     mountains: [
       { x: 0, w: 350, h: 120 },
       { x: 260, w: 280, h: 160 },
@@ -116,15 +119,22 @@
     shotsLeft = 5;
     launched = false;
     win = false;
-    state.birds = []; state.pigs = []; state.blocks = []; state.particles = [];
+    state.birds = [];
+    state.pigs = [];
+    state.blocks = [];
+    state.particles = [];
+
     const bird = makeBird(sling.x, sling.y);
     state.birds.push(bird);
     activeBird = bird;
 
     const pigBaseX = 820;
     const pigBaseY = groundY - 34;
-    for (let i = 0; i < 4; i++) state.pigs.push(makePig(pigBaseX + (i % 2) * 54, pigBaseY - Math.floor(i / 2) * 54));
+    for (let i = 0; i < 4; i++) {
+      state.pigs.push(makePig(pigBaseX + (i % 2) * 54, pigBaseY - Math.floor(i / 2) * 54));
+    }
 
+    // Tower blocks
     const towerX = 760;
     const towerY = groundY - 26;
     for (let row = 0; row < 4; row++) {
@@ -132,6 +142,8 @@
         state.blocks.push(makeBlock(towerX + col * 46, towerY - row * 36, row % 2 === 0 ? 46 : 88, 26));
       }
     }
+
+    // Left small stack
     for (let i = 0; i < 3; i++) state.blocks.push(makeBlock(620, groundY - 26 - i * 34, 64, 22));
 
     updateHud();
@@ -144,21 +156,33 @@
     targetsEl.textContent = state.pigs.filter(p => !p.dead).length;
   }
 
-  function makeBird(x, y) { return { type: 'bird', x, y, r: 18, vx: 0, vy: 0, color: '#ef4444', dead: false, launchedAt: 0 }; }
-  function makePig(x, y) { return { type: 'pig', x, y, r: 16, vx: 0, vy: 0, dead: false, color: '#22c55e' }; }
-  function makeBlock(x, y, w, h) { return { type: 'block', x, y, w, h, vx: 0, vy: 0, dead: false, color: '#c08457' }; }
+  function makeBird(x, y) {
+    return { type: 'bird', x, y, r: 18, vx: 0, vy: 0, color: '#ef4444', dead: false, launchedAt: 0 };
+  }
 
-  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-  function dist(x1, y1, x2, y2) { return Math.hypot(x2 - x1, y2 - y1); }
+  function makePig(x, y) {
+    return { type: 'pig', x, y, r: 16, vx: 0, vy: 0, dead: false, color: '#22c55e' };
+  }
+
+  function makeBlock(x, y, w, h) {
+    return { type: 'block', x, y, w, h, vx: 0, vy: 0, dead: false, color: '#c08457' };
+  }
+
+  function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+  function dist(a, b, c, d) { return Math.hypot(c - a, d - b); }
 
   function spawnBurst(x, y, color) {
-    for (let i = 0; i < 14; i++) state.particles.push({ x, y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6 - 2, life: 1, color });
+    for (let i = 0; i < 14; i++) {
+      state.particles.push({ x, y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6 - 2, life: 1, color });
+    }
   }
 
   function shootBird() {
     if (!activeBird || launched || shotsLeft <= 0) return;
-    activeBird.vx = (activeBird.x - sling.x) * 0.18;
-    activeBird.vy = (activeBird.y - sling.y) * 0.18;
+    // The further back the bird is pulled, the faster it launches
+    // Pulling left/back -> negative delta -> flies right/up
+    activeBird.vx = (sling.x - activeBird.x) * launchMultiplier;
+    activeBird.vy = (sling.y - activeBird.y) * launchMultiplier;
     activeBird.launchedAt = performance.now();
     launched = true;
     shotsLeft -= 1;
@@ -167,8 +191,9 @@
   }
 
   function nextBird() {
-    if (win || !launched) return;
-    shotsLeft = Math.max(0, shotsLeft);
+    if (win) return;
+    if (!launched) return;
+    if (shotsLeft < 0) shotsLeft = 0;
     const bird = makeBird(sling.x, sling.y);
     state.birds.push(bird);
     activeBird = bird;
@@ -178,16 +203,57 @@
     updateHud();
   }
 
+  function circleRectCollision(c, r) {
+    const rx = r.x, ry = r.y, rw = r.w, rh = r.h;
+    const closestX = clamp(c.x, rx, rx + rw);
+    const closestY = clamp(c.y, ry, ry + rh);
+    const d = dist(c.x, c.y, closestX, closestY);
+    return d < c.r;
+  }
+
+  function resolveCollisionCircleRect(c, r) {
+    const closestX = clamp(c.x, r.x, r.x + r.w);
+    const closestY = clamp(c.y, r.y, r.y + r.h);
+    const dx = c.x - closestX;
+    const dy = c.y - closestY;
+    const d = Math.hypot(dx, dy) || 0.0001;
+    const overlap = c.r - d;
+    if (overlap > 0) {
+      const nx = dx / d;
+      const ny = dy / d;
+      c.x += nx * overlap;
+      c.y += ny * overlap;
+      const dot = c.vx * nx + c.vy * ny;
+      c.vx -= 1.6 * dot * nx;
+      c.vy -= 1.6 * dot * ny;
+      r.vx += dot * nx * 0.3;
+      r.vy += dot * ny * 0.3;
+      return true;
+    }
+    return false;
+  }
+
   function updatePhysics() {
     for (const bird of state.birds) {
-      if (bird.dead || (dragging && bird === activeBird)) continue;
+      if (bird.dead) continue;
+      // When we're actively dragging this bird, ignore physics until release
+      if (dragging && bird === activeBird) continue;
+
       bird.vy += gravity;
       bird.vx *= air;
       bird.vy *= air;
       bird.x += bird.vx;
       bird.y += bird.vy;
-      if (bird.y + bird.r > groundY) { bird.y = groundY - bird.r; bird.vy *= -0.35; bird.vx *= 0.82; if (Math.abs(bird.vy) < 0.8) bird.vy = 0; }
-      if (bird.x + bird.r < -100 || bird.x - bird.r > W + 100 || bird.y - bird.r > H + 100) bird.dead = true;
+
+      if (bird.y + bird.r > groundY) {
+        bird.y = groundY - bird.r;
+        bird.vy *= -0.35;
+        bird.vx *= 0.82;
+        if (Math.abs(bird.vy) < 0.8) bird.vy = 0;
+      }
+      if (bird.x + bird.r < -100 || bird.x - bird.r > W + 100 || bird.y - bird.r > H + 100) {
+        bird.dead = true;
+      }
     }
 
     for (const pig of state.pigs) {
@@ -197,7 +263,10 @@
       pig.vy *= 0.995;
       pig.x += pig.vx;
       pig.y += pig.vy;
-      if (pig.y + pig.r > groundY) { pig.y = groundY - pig.r; pig.vy *= -0.25; }
+      if (pig.y + pig.r > groundY) {
+        pig.y = groundY - pig.r;
+        pig.vy *= -0.25;
+      }
       pig.vx *= 0.98;
 
       for (const bird of state.birds) {
@@ -229,7 +298,10 @@
       block.vy *= 0.99;
       block.x += block.vx;
       block.y += block.vy;
-      if (block.y + block.h > groundY) { block.y = groundY - block.h; block.vy *= -0.2; }
+      if (block.y + block.h > groundY) {
+        block.y = groundY - block.h;
+        block.vy *= -0.2;
+      }
 
       for (const bird of state.birds) {
         if (bird.dead) continue;
@@ -275,53 +347,31 @@
     }
   }
 
-  function circleRectCollision(c, r) {
-    const rx = r.x, ry = r.y, rw = r.w, rh = r.h;
-    const closestX = clamp(c.x, rx, rx + rw);
-    const closestY = clamp(c.y, ry, ry + rh);
-    return dist(c.x, c.y, closestX, closestY) < c.r;
-  }
-
-  function resolveCollisionCircleRect(c, r) {
-    const closestX = clamp(c.x, r.x, r.x + r.w);
-    const closestY = clamp(c.y, r.y, r.y + r.h);
-    const dx = c.x - closestX;
-    const dy = c.y - closestY;
-    const d = Math.hypot(dx, dy) || 0.0001;
-    const overlap = c.r - d;
-    if (overlap <= 0) return;
-    const nx = dx / d;
-    const ny = dy / d;
-    c.x += nx * overlap;
-    c.y += ny * overlap;
-    const dot = c.vx * nx + c.vy * ny;
-    c.vx -= 1.6 * dot * nx;
-    c.vy -= 1.6 * dot * ny;
-    r.vx += dot * nx * 0.3;
-    r.vy += dot * ny * 0.3;
-  }
-
   function drawBackground() {
     ctx.clearRect(0,0,W,H);
+
     ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    for (const [x, y, s] of [[140, 120, 1], [420, 88, 1.2], [840, 130, 0.9], [1030, 78, 1.0]]) {
+    const clouds = [[140, 120, 1], [420, 88, 1.2], [840, 130, 0.9], [1030, 78, 1.0]];
+    for (const [x, y, s] of clouds) {
       ctx.beginPath();
       ctx.arc(x, y, 28*s, 0, Math.PI*2);
       ctx.arc(x+26*s, y-12*s, 22*s, 0, Math.PI*2);
       ctx.arc(x+54*s, y, 26*s, 0, Math.PI*2);
       ctx.fill();
     }
+
     for (const m of state.mountains) {
       ctx.fillStyle = '#4ade80';
       ctx.beginPath();
       ctx.ellipse(m.x + m.w/2, groundY + 60, m.w/2, m.h, 0, 0, Math.PI*2);
       ctx.fill();
     }
+
     const grd = ctx.createLinearGradient(0, groundY, 0, H);
     grd.addColorStop(0, '#22c55e');
     grd.addColorStop(1, '#166534');
     ctx.fillStyle = grd;
-    ctx.fillRect(0, groundY, W, H - groundY);
+    ctx.fillRect(0, groundY, W, H-groundY);
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     for (let i=0;i<12;i++) ctx.fillRect(i*100, groundY+10, 60, 4);
   }
@@ -334,6 +384,7 @@
     ctx.moveTo(sling.x - 18, sling.y - 10);
     ctx.lineTo(sling.x - 26, sling.y + 55);
     ctx.moveTo(sling.x + 18, sling.y - 10);
+    ctx.lineTo(sling.x + 18, sling.y - 10);
     ctx.lineTo(sling.x + 26, sling.y + 55);
     ctx.stroke();
 
@@ -444,9 +495,10 @@
     };
   }
 
+  // Drag using window-level listeners so pointerup always fires even if it leaves the canvas
   canvas.addEventListener('pointerdown', (ev) => {
     const p = pointerPos(ev);
-    if (activeBird && !launched && dist(p.x, p.y, activeBird.x, activeBird.y) <= activeBird.r + dragBonus) {
+    if (activeBird && !launched && dist(p.x, p.y, activeBird.x, activeBird.y) <= activeBird.r + 32) {
       dragging = true;
       setMessage('Pull back and release!');
       ev.preventDefault();
