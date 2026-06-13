@@ -119,6 +119,22 @@
     }
   }
 
+  function resetGame() {
+    currentLevel = 1;
+    score = 0;
+    win = false;
+    launched = false;
+    dragging = false;
+    loadLevel(1);
+    updateHud();
+    setMessage('Ready to launch.');
+  }
+
+  window.__test_killAllPigs = function () {
+    if (!state) return;
+    state.pigs.forEach(p => { p.dead = true; });
+  };
+
   function setMessage(text, good = false) {
     msgEl.textContent = text;
     msgEl.className = good ? 'status good' : 'status';
