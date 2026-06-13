@@ -516,11 +516,16 @@
     activeBird.vy = 0;
   });
 
-  canvas.addEventListener('pointerup', () => {
+  function endDrag(ev) {
     if (!dragging) return;
     dragging = false;
+    try { canvas.releasePointerCapture(ev.pointerId); } catch {}
     shootBird();
-  });
+  }
+
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+  canvas.addEventListener('pointerleave', endDrag);
 
   resetBtn.addEventListener('click', resetGame);
   newBirdBtn.addEventListener('click', nextBird);
