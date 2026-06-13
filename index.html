@@ -254,12 +254,12 @@
   }
 
   function shootCat() {
-    if (!activeBird || launched || shotsLeft <= 0) return;
+    if (!activeCat || launched || shotsLeft <= 0) return;
     // The further back the bird is pulled, the faster it launches
     // Pulling left/back -> negative delta -> flies right/up
-    activeBird.vx = (sling.x - activeBird.x) * launchMultiplier;
-    activeBird.vy = (sling.y - activeBird.y) * launchMultiplier;
-    activeBird.launchedAt = performance.now();
+    activeCat.vx = (sling.x - activeCat.x) * launchMultiplier;
+    activeCat.vy = (sling.y - activeCat.y) * launchMultiplier;
+    activeCat.launchedAt = performance.now();
     launched = true;
     shotsLeft -= 1;
     setMessage('Cat launched!', true);
@@ -313,7 +313,7 @@
     for (const bird of state.birds) {
       if (bird.dead) continue;
       // When we're actively dragging this bird, ignore physics until release
-      if (dragging && bird === activeBird) continue;
+      if (dragging && bird === activeCat) continue;
 
       bird.vy += gravity;
       bird.vx *= air;
@@ -472,13 +472,13 @@
     ctx.lineTo(sling.x + 18, sling.y - 10);
     ctx.stroke();
 
-    if (dragging && activeBird) {
+    if (dragging && activeCat) {
       ctx.strokeStyle = 'rgba(55, 65, 81, 0.8)';
       ctx.lineWidth = 3;
       ctx.setLineDash([6, 6]);
       ctx.beginPath();
       ctx.moveTo(sling.x, sling.y);
-      ctx.lineTo(activeBird.x, activeBird.y);
+      ctx.lineTo(activeCat.x, activeCat.y);
       ctx.stroke();
       ctx.setLineDash([]);
     }
@@ -612,7 +612,7 @@
   // Drag using window-level listeners so pointerup always fires even if it leaves the canvas
   canvas.addEventListener('pointerdown', (ev) => {
     const p = pointerPos(ev);
-    if (activeBird && !launched && dist(p.x, p.y, activeBird.x, activeBird.y) <= activeBird.r + 32) {
+    if (activeCat && !launched && dist(p.x, p.y, activeCat.x, activeCat.y) <= activeCat.r + 32) {
       dragging = true;
       setMessage('Pull back and release!');
       ev.preventDefault();
@@ -620,7 +620,7 @@
   });
 
   window.addEventListener('pointermove', (ev) => {
-    if (!dragging || !activeBird) return;
+    if (!dragging || !activeCat) return;
     const p = pointerPos(ev);
     let dx = p.x - sling.x;
     let dy = p.y - sling.y;
@@ -629,10 +629,10 @@
       dx = dx / mag * maxStretch;
       dy = dy / mag * maxStretch;
     }
-    activeBird.x = sling.x + dx;
-    activeBird.y = sling.y + dy;
-    activeBird.vx = 0;
-    activeBird.vy = 0;
+    activeCat.x = sling.x + dx;
+    activeCat.y = sling.y + dy;
+    activeCat.vx = 0;
+    activeCat.vy = 0;
   });
 
   function endDrag() {
